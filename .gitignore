@@ -1,0 +1,18 @@
+# Environment variables and API keys
+.env
+
+# Python caching
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+
+# Application generated content (Snapshots)
+app/static/snapshots/
+
+# System and logs
+*.log
+.DS_Store

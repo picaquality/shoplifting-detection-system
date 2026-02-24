@@ -1,0 +1,5 @@
+Flask==3.0.3
+opencv-python-headless==4.9.0.80
+python-dotenv==1.0.1
+inference==0.11.0
+inference-sdk==0.11.0

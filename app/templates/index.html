@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Camera Monitor</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.25);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, #0f172a 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Bar */
+        header {
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .shield-icon {
+            width: 28px;
+            height: 28px;
+            fill: var(--accent-color);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-settings {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-settings:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        /* Main Content Layout */
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+            padding: 1.5rem 2rem;
+            flex-grow: 1;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* UI Panels (Glassmorphism) */
+        .panel {
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.02);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Video Feed Area */
+        .video-wrapper {
+            position: relative;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            min-height: 400px;
+        }
+
+        .video-wrapper img {
+            max-width: 100%;
+            max-height: 70vh;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Alert Control Controls */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .switch-label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+            border: 1px solid var(--border-color);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Alerts List */
+        .alerts-body {
+            padding: 1rem;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: calc(100vh - 200px);
+        }
+
+        /* Custom Scrollbar */
+        .alerts-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .alerts-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .alerts-body::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .alerts-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        ul#alerts-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        ul#alerts-list li {
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transform-origin: top;
+            animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.2s ease;
+        }
+
+        ul#alerts-list li:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        ul#alerts-list li.danger {
+            border-left: 4px solid var(--danger-color);
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+        }
+
+        ul#alerts-list li.info {
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .alert-time {
+            font-family: monospace;
+            font-size: 0.8rem;
+        }
+
+        .alert-body {
+            font-size: 1.05rem;
+            font-weight: 500;
+        }
+
+        .alert-conf {
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #cbd5e1;
+        }
+
+        @keyframes slideIn {
+            0% {
+                opacity: 0;
+                transform: translateY(-15px) scale(0.95);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Snapshot Panel */
+        .snapshot-container {
+            padding: 1rem;
+            border-top: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.01);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .snapshot-title {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .snapshot-title span.pulse-indicator {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--danger-color);
+            box-shadow: 0 0 6px var(--danger-color);
+            animation: pulse-danger 1.5s infinite;
+        }
+
+        @keyframes pulse-danger {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .snapshot-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            background: #000;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .snapshot-wrapper:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+        }
+
+        .snapshot-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .snapshot-empty {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            opacity: 0.6;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 2rem;
+            opacity: 0.5;
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 1rem;
+            fill: currentColor;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal h3 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            font-family: inherit;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .btn-cancel:hover {
+            color: var(--text-primary);
+        }
+
+        .btn-save {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="logo-area">
+            <svg class="shield-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+            <h1>Smart Monitor AI</h1>
+        </div>
+        <div class="header-actions">
+            <button class="btn-settings" id="open-settings-btn">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                    <path
+                        d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z" />
+                    <path
+                        d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319z" />
+                </svg>
+                Camera Config
+            </button>
+            <div class="status-badge" id="conn-status">
+                <div class="pulse-dot"></div>
+                System Active
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Main Feed Panel -->
+        <main class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Live Camera Feed</h2>
+                <!-- Small indicator that we could show framerate or resolution in future -->
+                <span id="current-source-label"
+                    style="font-size: 0.8rem; color: var(--text-secondary); font-family: monospace;">Loading...</span>
+            </div>
+            <div class="video-wrapper">
+                <!-- The src attribute hits our /video_feed route in Flask -->
+                <img src="{{ url_for('video_feed') }}" alt="Live Camera Feed Stream" id="video-stream">
+            </div>
+        </main>
+
+        <!-- Alerts Output Panel -->
+        <aside class="panel">
+            <div class="panel-header">
+                <h2 class="panel-title">Detection Log</h2>
+                <div class="controls">
+                    <span class="switch-label">Log Detections</span>
+                    <label class="switch">
+                        <input type="checkbox" id="pause-alerts-toggle" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="alerts-body">
+                <ul id="alerts-list">
+                    <li class="info" id="initial-wait-msg">
+                        <div class="alert-header">
+                            <span>System Initialize</span>
+                            <span class="alert-time">Just now</span>
+                        </div>
+                        <div class="alert-body">Waiting for intelligence detections...</div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Latest Snapshot Display -->
+            <div class="snapshot-container">
+                <div class="snapshot-title">
+                    Latest Incident
+                    <span class="pulse-indicator" id="snapshot-indicator" style="display: none;"></span>
+                </div>
+                <div class="snapshot-wrapper">
+                    <img id="latest-snapshot-img" src="" alt="Detection Snapshot" style="display: none;">
+                    <div class="snapshot-empty" id="snapshot-placeholder">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        No active incidents
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Camera Configuration Modal -->
+    <div class="modal-overlay" id="config-modal">
+        <div class="modal">
+            <h3>Camera Configuration</h3>
+            <div class="form-group">
+                <label for="camera-source-input">Camera Source</label>
+                <input type="text" id="camera-source-input" placeholder="e.g. 0 for webcam, or rtsp://...">
+                <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                    Supports device IDs (0, 1) or IP Camera RTSP streams.
+                </span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label for="confidence-input" style="display: flex; justify-content: space-between;">
+                        <span>Detection Sensitivity</span>
+                        <span id="conf-val" style="color: var(--accent-color); font-weight: 600;">0.40</span>
+                    </label>
+                    <input type="range" id="confidence-input" step="0.05" min="0.1" max="1.0" value="0.40"
+                        style="accent-color: var(--accent-color); padding: 0;">
+                    <span style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Lower = more
+                        alerts</span>
+                </div>
+                <div class="form-group">
+                    <label for="frame-skip-input" style="display: flex; justify-content: space-between;">
+                        <span>Processing Rest (Frames)</span>
+                        <span id="skip-val" style="color: var(--accent-color); font-weight: 600;">3</span>
+                    </label>
+                    <input type="range" id="frame-skip-input" step="1" min="1" max="30" value="3"
+                        style="accent-color: var(--accent-color); padding: 0;">
+                    <span style="font-size: 0.7rem; color: var(--text-secondary); margin-top: 4px;">Higher = saves CPU,
+                        but updates visuals slower</span>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" id="close-settings-btn">Cancel</button>
+                <button class="btn btn-save" id="save-settings-btn">Save & Restart Stream</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isPollingPaused = false;
+        const alertsList = document.getElementById('alerts-list');
+        const toggleSwitch = document.getElementById('pause-alerts-toggle');
+        const connStatus = document.getElementById('conn-status');
+
+        // Handle the Toggle switch
+        toggleSwitch.addEventListener('change', (e) => {
+            isPollingPaused = !e.target.checked;
+        });
+
+        // Modal Logic
+        const modal = document.getElementById('config-modal');
+        const openBtn = document.getElementById('open-settings-btn');
+        const closeBtn = document.getElementById('close-settings-btn');
+        const saveBtn = document.getElementById('save-settings-btn');
+        const camInput = document.getElementById('camera-source-input');
+        const confInput = document.getElementById('confidence-input');
+        const skipInput = document.getElementById('frame-skip-input');
+        const confVal = document.getElementById('conf-val');
+        const skipVal = document.getElementById('skip-val');
+        const currentSourceLabel = document.getElementById('current-source-label');
+        const videoImage = document.getElementById('video-stream');
+
+        // Update slider values dynamically
+        confInput.addEventListener('input', (e) => {
+            confVal.innerText = parseFloat(e.target.value).toFixed(2);
+        });
+        skipInput.addEventListener('input', (e) => {
+            skipVal.innerText = e.target.value;
+        });
+
+        // Snapshot Elements
+        const snapshotImg = document.getElementById('latest-snapshot-img');
+        const snapshotPlaceholder = document.getElementById('snapshot-placeholder');
+        const snapshotIndicator = document.getElementById('snapshot-indicator');
+        let currentSnapshotUrl = null;
+
+        openBtn.addEventListener('click', () => modal.classList.add('active'));
+        closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+
+        saveBtn.addEventListener('click', async () => {
+            const newSource = camInput.value.trim();
+            const newConf = confInput.value.trim();
+            const newSkip = skipInput.value.trim();
+
+            if (!newSource) return;
+
+            // Optional: visual loading state
+            saveBtn.innerText = "Saving...";
+
+            try {
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        camera_source: newSource,
+                        confidence_threshold: newConf,
+                        frame_skip: newSkip
+                    })
+                });
+                if (res.ok) {
+                    // Update frontend label
+                    currentSourceLabel.innerText = "Source: " + newSource;
+                    // Force the IMG tag to reload the stream by appending a timestamp
+                    videoImage.src = "/video_feed?" + new Date().getTime();
+                }
+            } catch (err) {
+                console.error("Failed to update config", err);
+            }
+            saveBtn.innerText = "Save & Restart Stream";
+            modal.classList.remove('active');
+        });
+
+        // Store active alerts so we don't spam the UI with the exact same thing every 2 seconds
+        // if the person is just standing there for 10 seconds.
+        let lastReportedTime = 0;
+
+        // Poll the server for detection status every 2 seconds
+        setInterval(async () => {
+            if (isPollingPaused) return;
+
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                if (data.status === "active") {
+                    connStatus.style.color = "var(--success-color)";
+                    connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--success-color)";
+                    connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--success-color)";
+
+                    if (data.current_source !== undefined) {
+                        currentSourceLabel.innerText = "Source: " + data.current_source;
+                        // Seed the input box
+                        if (camInput.value === "") camInput.value = data.current_source;
+                    }
+                    if (data.confidence_threshold !== undefined && !modal.classList.contains('active')) {
+                        confInput.value = data.confidence_threshold;
+                        confVal.innerText = parseFloat(data.confidence_threshold).toFixed(2);
+                    }
+                    if (data.frame_skip !== undefined && !modal.classList.contains('active')) {
+                        skipInput.value = data.frame_skip;
+                        skipVal.innerText = data.frame_skip;
+                    }
+                }
+
+                if (data.detections && data.detections.length > 0) {
+
+                    // Simple debounce: Only log one visual alert every 3 seconds to prevent UI spam 
+                    // (since video runs at 30fps and poll is every 2s, we could get many duplicates)
+                    const now = Date.now();
+                    if (now - lastReportedTime < 3000) return;
+                    lastReportedTime = now;
+
+                    // Remove the "Waiting" default message if it's the first real alert
+                    const firstChild = alertsList.firstElementChild;
+                    if (firstChild && firstChild.classList.contains('info')) {
+                        alertsList.innerHTML = '';
+                    }
+
+                    // We have new detections! Add them to the list.
+                    data.detections.forEach(det => {
+                        const li = document.createElement('li');
+                        li.className = 'danger';
+
+                        const timeString = new Date().toLocaleTimeString([], { hour12: false });
+                        const confPercent = Math.round(det.confidence * 100);
+
+                        li.innerHTML = `
+                            <div class="alert-header">
+                                <span style="color: var(--danger-color); font-weight: 600;">Suspicious Activity</span>
+                                <span class="alert-time">${timeString}</span>
+                            </div>
+                            <div class="alert-body">
+                                Detected: <span style="text-transform: capitalize;">${det.label}</span>
+                                <span class="alert-conf">${confPercent}% Conf</span>
+                            </div>
+                        `;
+
+                        // Add to top
+                        alertsList.prepend(li);
+
+                        // Keep list manageable (max 12 items)
+                        if (alertsList.children.length > 12) {
+                            alertsList.removeChild(alertsList.lastChild);
+                        }
+                    });
+                }
+
+                // Handle new snapshots
+                if (data.snapshot_url && data.snapshot_url !== currentSnapshotUrl) {
+                    currentSnapshotUrl = data.snapshot_url;
+
+                    // Add timestamp to prevent browser cache
+                    snapshotImg.src = data.snapshot_url + "?t=" + new Date().getTime();
+
+                    snapshotImg.style.display = 'block';
+                    snapshotPlaceholder.style.display = 'none';
+                    snapshotIndicator.style.display = 'inline-block';
+                }
+
+            } catch (error) {
+                console.error("Error fetching status:", error);
+                connStatus.style.color = "var(--danger-color)";
+                connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--danger-color)";
+                connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--danger-color)";
+                connStatus.childNodes[2].nodeValue = " Connection Lost";
+            }
+        }, 2000); 
+    </script>
+</body>
+
+</html>
