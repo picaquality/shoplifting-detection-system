@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from dotenv import load_dotenv
 from flask import Flask
 
 from .api import register_routes
@@ -68,3 +67,8 @@ def create_app() -> Flask:
     app.config["stream_processor"] = stream_processor
 
     return app
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    def load_dotenv():
+        return False

@@ -1,4 +1,4 @@
-from shoplifting_system import create_app
+from shoplifting_system.app_factory import create_app
 
 app = create_app()
 
