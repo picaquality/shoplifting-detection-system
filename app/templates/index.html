@@ -592,7 +592,7 @@
             </button>
             <div class="status-badge" id="conn-status">
                 <div class="pulse-dot"></div>
-                System Active
+                <span id="conn-status-text">System Active</span>
             </div>
         </div>
     </header>
@@ -704,6 +704,7 @@
         const alertsList = document.getElementById('alerts-list');
         const toggleSwitch = document.getElementById('pause-alerts-toggle');
         const connStatus = document.getElementById('conn-status');
+        const connStatusText = document.getElementById('conn-status-text');
 
         // Handle the Toggle switch
         toggleSwitch.addEventListener('change', (e) => {
@@ -760,16 +761,25 @@
                         frame_skip: newSkip
                     })
                 });
+                const payload = await res.json();
                 if (res.ok) {
-                    // Update frontend label
-                    currentSourceLabel.innerText = "Source: " + newSource;
-                    // Force the IMG tag to reload the stream by appending a timestamp
+                    currentSourceLabel.innerText = "Source: " + payload.applied.camera_source;
+                    saveBtn.innerText = "Restarting stream...";
                     videoImage.src = "/video_feed?" + new Date().getTime();
+                    setTimeout(() => {
+                        saveBtn.innerText = "Save & Restart Stream";
+                    }, 1000);
+                } else {
+                    const errMsg = payload && payload.message ? payload.message : "Invalid settings";
+                    saveBtn.innerText = errMsg;
                 }
             } catch (err) {
                 console.error("Failed to update config", err);
+                saveBtn.innerText = "Save failed";
             }
-            saveBtn.innerText = "Save & Restart Stream";
+            if (saveBtn.innerText === "Saving..." || saveBtn.innerText === "Save failed") {
+                saveBtn.innerText = "Save & Restart Stream";
+            }
             modal.classList.remove('active');
         });
 
@@ -786,9 +796,17 @@
                 const data = await response.json();
 
                 if (data.status === "active") {
-                    connStatus.style.color = "var(--success-color)";
-                    connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--success-color)";
-                    connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--success-color)";
+                    if (data.connection_status === "active") {
+                        connStatus.style.color = "var(--success-color)";
+                        connStatusText.textContent = "System Active";
+                        connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--success-color)";
+                        connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--success-color)";
+                    } else {
+                        connStatus.style.color = "var(--danger-color)";
+                        connStatusText.textContent = data.last_error ? ("Degraded: " + data.last_error) : "System Degraded";
+                        connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--danger-color)";
+                        connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--danger-color)";
+                    }
 
                     if (data.current_source !== undefined) {
                         currentSourceLabel.innerText = "Source: " + data.current_source;
@@ -827,16 +845,36 @@
                         const timeString = new Date().toLocaleTimeString([], { hour12: false });
                         const confPercent = Math.round(det.confidence * 100);
 
-                        li.innerHTML = `
-                            <div class="alert-header">
-                                <span style="color: var(--danger-color); font-weight: 600;">Suspicious Activity</span>
-                                <span class="alert-time">${timeString}</span>
-                            </div>
-                            <div class="alert-body">
-                                Detected: <span style="text-transform: capitalize;">${det.label}</span>
-                                <span class="alert-conf">${confPercent}% Conf</span>
-                            </div>
-                        `;
+                        const header = document.createElement('div');
+                        header.className = 'alert-header';
+
+                        const title = document.createElement('span');
+                        title.style.color = 'var(--danger-color)';
+                        title.style.fontWeight = '600';
+                        title.textContent = 'Suspicious Activity';
+
+                        const time = document.createElement('span');
+                        time.className = 'alert-time';
+                        time.textContent = timeString;
+                        header.appendChild(title);
+                        header.appendChild(time);
+
+                        const body = document.createElement('div');
+                        body.className = 'alert-body';
+                        body.appendChild(document.createTextNode('Detected: '));
+
+                        const label = document.createElement('span');
+                        label.style.textTransform = 'capitalize';
+                        label.textContent = String(det.label || 'unknown');
+                        body.appendChild(label);
+
+                        const conf = document.createElement('span');
+                        conf.className = 'alert-conf';
+                        conf.textContent = `${confPercent}% Conf`;
+                        body.appendChild(conf);
+
+                        li.appendChild(header);
+                        li.appendChild(body);
 
                         // Add to top
                         alertsList.prepend(li);
@@ -865,7 +903,7 @@
                 connStatus.style.color = "var(--danger-color)";
                 connStatus.querySelector('.pulse-dot').style.backgroundColor = "var(--danger-color)";
                 connStatus.querySelector('.pulse-dot').style.boxShadow = "0 0 8px var(--danger-color)";
-                connStatus.childNodes[2].nodeValue = " Connection Lost";
+                connStatusText.textContent = "Connection Lost";
             }
         }, 2000); 
     </script>
