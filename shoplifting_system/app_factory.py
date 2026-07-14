@@ -18,6 +18,14 @@ STATIC_DIR = BASE_DIR / "app" / "static"
 SNAPSHOT_DIR = STATIC_DIR / "snapshots"
 
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+
+    def load_dotenv():
+        return False
+
+
 def create_app() -> Flask:
     load_dotenv()
     settings = load_settings_from_env()
@@ -36,8 +44,10 @@ def create_app() -> Flask:
 
     state = SharedState(
         camera_source=settings.camera_source,
+        fallback_camera_source=settings.fallback_camera_source,
         confidence_threshold=settings.confidence_threshold,
         frame_skip=settings.frame_skip,
+        sensitivity_profile=settings.sensitivity_profile,
     )
 
     inference_engine = InferenceEngine(
@@ -58,6 +68,7 @@ def create_app() -> Flask:
         reconnect_delay_sec=settings.reconnect_delay_sec,
         reconnect_backoff_max_sec=settings.reconnect_backoff_max_sec,
         stream_error_frame_delay_sec=settings.stream_error_frame_delay_sec,
+        targets=settings.targets,
     )
 
     register_routes(app, state=state, stream_processor=stream_processor, settings=settings)
@@ -67,8 +78,3 @@ def create_app() -> Flask:
     app.config["stream_processor"] = stream_processor
 
     return app
-try:
-    from dotenv import load_dotenv
-except ImportError:  # pragma: no cover
-    def load_dotenv():
-        return False

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import Response, jsonify, render_template, request
 
-from .config import validate_config_payload
+from .config import SENSITIVITY_PROFILES, validate_config_payload
 
 
 def register_routes(app, state, stream_processor, settings):
@@ -17,7 +17,7 @@ def register_routes(app, state, stream_processor, settings):
     @app.route("/api/status")
     def get_status():
         payload = state.snapshot_status()
-        payload["status"] = "active" if payload["connection_status"] == "active" else "degraded"
+        payload["status"] = "active" if payload["connection_status"] in {"healthy", "recovering"} else "degraded"
         return jsonify(payload)
 
     @app.route("/api/metrics")
@@ -29,6 +29,7 @@ def register_routes(app, state, stream_processor, settings):
             "max_cpu_percent": settings.targets.max_cpu_percent,
             "max_false_alert_rate_per_hour": settings.targets.max_false_alert_rate_per_hour,
             "min_stream_uptime_percent": settings.targets.min_stream_uptime_percent,
+            "max_processing_lag_ms": settings.targets.max_processing_lag_ms,
         }
         return jsonify(payload)
 
@@ -41,6 +42,7 @@ def register_routes(app, state, stream_processor, settings):
                 "max_cpu_percent": settings.targets.max_cpu_percent,
                 "max_false_alert_rate_per_hour": settings.targets.max_false_alert_rate_per_hour,
                 "min_stream_uptime_percent": settings.targets.min_stream_uptime_percent,
+                "max_processing_lag_ms": settings.targets.max_processing_lag_ms,
             }
         )
 
@@ -62,6 +64,7 @@ def register_routes(app, state, stream_processor, settings):
 
         if clean:
             state.update_config(clean)
+            stream_processor.apply_runtime_config(clean)
             stream_processor.request_restart()
 
         return jsonify(
@@ -70,8 +73,38 @@ def register_routes(app, state, stream_processor, settings):
                 "message": "Settings updated",
                 "applied": {
                     "camera_source": state.camera_source,
+                    "fallback_camera_source": state.fallback_camera_source,
                     "confidence_threshold": state.confidence_threshold,
                     "frame_skip": state.base_frame_skip,
+                    "sensitivity_profile": state.sensitivity_profile,
+                    "allowed_sensitivity_profiles": sorted(SENSITIVITY_PROFILES.keys()),
                 },
+            }
+        )
+
+    @app.route("/api/feedback", methods=["POST"])
+    def add_feedback():
+        data = request.get_json(silent=True) or {}
+        feedback_type = str(data.get("type", "")).strip().lower()
+
+        if feedback_type not in {"false_alert", "confirmed_incident"}:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Invalid feedback type",
+                        "errors": {"type": "type must be one of: false_alert, confirmed_incident"},
+                    }
+                ),
+                400,
+            )
+
+        state.record_feedback(feedback_type)
+        snapshot = state.snapshot_status()["feedback"]
+        return jsonify(
+            {
+                "success": True,
+                "message": "Feedback recorded",
+                "feedback": snapshot,
             }
         )
